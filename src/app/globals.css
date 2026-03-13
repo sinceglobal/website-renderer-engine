@@ -1,26 +1,143 @@
 @import "tailwindcss";
+@plugin "tailwindcss-animate";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* 
+ * Escaneamos la librería usando rutas relativas directas al código fuente y al dist
+ */
+@source "../../../website-builder-base/src/**/*.{ts,tsx}";
+@source "../../../website-builder-base/dist/**/*.{js,mjs}";
+@source "../../node_modules/@sinceglobal/website-builder-base/**/*.{js,mjs}";
+@source "../**/*.{ts,tsx}";
 
-@theme inline {
+/* Safelist for dynamic classes from styleResolver.ts (text-*, font-*, rounded-*) 
+   text-xs text-sm text-base text-lg text-xl text-2xl text-3xl text-4xl text-5xl text-6xl text-7xl text-8xl text-9xl
+   font-thin font-extralight font-light font-normal font-medium font-semibold font-bold
+   rounded-none rounded-sm rounded-md rounded-lg rounded-xl rounded-2xl rounded-full
+   tracking-tighter tracking-tight tracking-normal tracking-wide tracking-widest
+   leading-none leading-tight leading-snug leading-normal leading-relaxed leading-loose
+*/
+
+@theme {
+  /* Colores */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  /* Fonts */
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
+
+  /* Spacing & Layout */
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  /* Animaciones */
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+
+  @keyframes accordion-down {
+    from { height: 0; }
+    to { height: var(--radix-accordion-content-height); }
+  }
+  @keyframes accordion-up {
+    from { height: var(--radix-accordion-content-height); }
+    to { height: 0; }
   }
 }
 
+/* ─── Default tokens (fallback antes de que TokenInjector cargue) ────────────
+ * Estos son los valores del sharedTokens del template digital ecommerce.
+ * El TokenInjector los sobreescribe en cuanto monta.
+ * ─────────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Colores light por defecto */
+  --background: oklch(0.99 0 0);
+  --foreground: oklch(0.09 0 0);
+  --card: oklch(0.99 0 0);
+  --card-foreground: oklch(0.09 0 0);
+  --popover: oklch(0.99 0 0);
+  --popover-foreground: oklch(0.09 0 0);
+  --primary: oklch(0.55 0.20 264);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.94 0 0);
+  --secondary-foreground: oklch(0.09 0 0);
+  --muted: oklch(0.95 0 0);
+  --muted-foreground: oklch(0.48 0 0);
+  --accent: oklch(0.60 0.18 25);
+  --accent-foreground: oklch(0.99 0 0);
+  --destructive: oklch(0.52 0.20 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  --border: oklch(0.88 0 0);
+  --input: oklch(0.94 0 0);
+  --ring: oklch(0.55 0.20 264);
+  --radius: 0.5rem;
+  --font-body: 'Geist', sans-serif;
+  --font-display: 'Cal Sans', sans-serif;
+  --font-mono: monospace;
+}
+
+/* ─── Dark mode override ─────────────────────────────────────────────────────
+ * Cuando TokenInjector agrega .dark al <html>, estos valores toman efecto.
+ * El injector también sobreescribe estos directamente en el elemento.
+ * ─────────────────────────────────────────────────────────────────────────── */
+.dark {
+  --background: oklch(0.08 0 0);
+  --foreground: oklch(0.97 0 0);
+  --card: oklch(0.11 0 0);
+  --card-foreground: oklch(0.97 0 0);
+  --popover: oklch(0.11 0 0);
+  --popover-foreground: oklch(0.97 0 0);
+  --primary: oklch(0.62 0.19 264);
+  --primary-foreground: oklch(0.97 0 0);
+  --secondary: oklch(0.14 0 0);
+  --secondary-foreground: oklch(0.85 0 0);
+  --muted: oklch(0.14 0 0);
+  --muted-foreground: oklch(0.52 0 0);
+  --accent: oklch(0.62 0.19 264);
+  --accent-foreground: oklch(0.97 0 0);
+  --destructive: oklch(0.52 0.20 25);
+  --destructive-foreground: oklch(0.97 0 0);
+  --border: oklch(0.20 0 0);
+  --input: oklch(0.15 0 0);
+  --ring: oklch(0.62 0.19 264);
+}
+
+/* ─── Base styles ────────────────────────────────────────────────────────────*/
+*, *::before, *::after {
+  border-color: var(--border);
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body, system-ui, sans-serif);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
