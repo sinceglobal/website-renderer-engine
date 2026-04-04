@@ -83,12 +83,57 @@ export function DesignSystemInjector({
       for (const [name, value] of Object.entries(spacing.scale)) {
         root.style.setProperty(`--spacing-${name}`, value as string);
       }
+    } else if (spacing.base) {
+      // If spacing has base and scale separately
+      if (typeof spacing === 'object') {
+        for (const [key, val] of Object.entries(spacing)) {
+          if (key !== 'base') {
+            root.style.setProperty(`--spacing-${key}`, val as string);
+          }
+        }
+      }
     }
 
     // Apply border radius
     const borderRadius = designTokens.border_radius || {};
     for (const [name, value] of Object.entries(borderRadius)) {
       root.style.setProperty(`--radius-${name}`, value as string);
+    }
+
+    // Also apply standard Tailwind spacing aliases for compatibility
+    // Map design system spacing to Tailwind spacing units
+    if (spacing.scale) {
+      const spacingMap: Record<string, string> = {
+        '0': '0',
+        '1': 'spacing-1',
+        '2': 'spacing-2',
+        '3': 'spacing-3',
+        '4': 'spacing-4',
+        '6': 'spacing-6',
+        '8': 'spacing-8',
+        '10': 'spacing-10',
+        '12': 'spacing-12',
+        '16': 'spacing-16',
+        '20': 'spacing-20',
+        '24': 'spacing-24',
+        '32': 'spacing-32',
+      };
+
+      for (const [twUnit, designVar] of Object.entries(spacingMap)) {
+        const value = spacing.scale[twUnit] as string | undefined;
+        if (value) {
+          // Set both the custom variable and standard CSS for Tailwind
+          root.style.setProperty(`--${designVar}`, value);
+        }
+      }
+    }
+
+    // Also apply Tailwind spacing classes directly to :root as CSS variables
+    // This allows Tailwind to use them like p-[var(--spacing-value)]
+    if (spacing.scale) {
+      for (const [key, value] of Object.entries(spacing.scale)) {
+        root.style.setProperty(`--spacing-${key}`, value as string);
+      }
     }
 
     // Store design tokens for component access if needed
