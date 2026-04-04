@@ -3,9 +3,11 @@ import { PageRenderer } from '@sinceglobal/website-builder-base';
 import { connectToDatabase } from '@/lib/mongoose';
 import { PageModel } from '@/models/Page';
 import { loadTemplate } from '@/lib/template-loader';
+import { DesignSystemInjector } from '@/components/DesignSystemInjector';
 
 const isDevelopment = process.env.NODE_ENV === 'development';
-const BUILDER_DUMP_URL = process.env.NEXT_PUBLIC_BUILDER_DUMP_URL || 'http://localhost:3000/api/builder/dump';
+const MICROSERVICE_URL = process.env.NEXT_PUBLIC_MICROSERVICE_URL || 'http://localhost:8000/api/v1';
+const DEV_SITE_ID = process.env.NEXT_PUBLIC_DEV_SITE_ID;
 
 interface PageProps {
   params: Promise<{
@@ -14,32 +16,98 @@ interface PageProps {
   }>;
 }
 
+let lastFoundSiteId: string | null = DEV_SITE_ID || null;
+
+/**
+ * Mapea recursivamente "type" a "nodeType" para compatibilidad con la librería base
+ */
+function normalizeNodeTypes(node: any): any {
+  if (!node || typeof node !== 'object') return node;
+
+  const nodeTypes = ['organism', 'molecule', 'atom'];
+  
+  // Lista de componentes Shadcn (para capitalización automática)
+  const shadcnComponents = [
+    'Button', 'Badge', 'Avatar', 'Input', 'Textarea', 'Label',
+    'Checkbox', 'Switch', 'Select', 'Slider', 'Progress', 'Separator',
+    'Skeleton', 'Tooltip', 'Card', 'CardHeader', 'CardContent',
+    'CardFooter', 'CardTitle', 'CardDescription',
+  ];
+
+  // Si el objeto tiene un type de componente, inyectar nodeType
+  if (node.type && nodeTypes.includes(node.type)) {
+    node.nodeType = node.type;
+  }
+
+  // Si es un átomo, normalizar el nombre del componente (ej: button -> Button)
+  if (node.nodeType === 'atom' && node.component) {
+    const compLower = node.component.toLowerCase();
+    const match = shadcnComponents.find(c => c.toLowerCase() === compLower);
+    if (match) {
+      node.component = match;
+    }
+  }
+
+  // Recorrer hijos recursivamente
+  if (Array.isArray(node.children)) {
+    node.children = node.children.map(normalizeNodeTypes);
+  }
+
+  // Recorrer secciones si es un template
+  if (Array.isArray(node.sections)) {
+    node.sections = node.sections.map(normalizeNodeTypes);
+  }
+
+  return node;
+}
+
 /**
  * Obtiene la configuración del website (lista de páginas permitidas, tema, etc)
  */
 async function getWebsiteConfig(domain: string) {
   try {
     if (isDevelopment) {
-      // En desarrollo: obtener de la bd
-      // Always fetch the first available config in DB to force rendering
-      const document = await PageModel.findOne({}).lean();
+      // En desarrollo: Usar el ID forzado o el más reciente
+      const siteIdToFetch = DEV_SITE_ID || (await (async () => {
+        const list = await fetch(`${MICROSERVICE_URL}/sites?limit=1`, { cache: 'no-store' }).then(r => r.json());
+        return list?.[0]?.site_id;
+      })());
 
-      if (!document) {
-        console.warn(`No DB document found for rendering`);
+      if (!siteIdToFetch) {
+        console.warn('No DEV_SITE_ID provided and no sites found in local microservice');
         return null;
       }
+      
+      lastFoundSiteId = siteIdToFetch;
+      
+      // Obtenemos el bundle completo del microservicio (POSTGRES)
+      const fullResponse = await fetch(`${MICROSERVICE_URL}/sites/${siteIdToFetch}`, { cache: 'no-store' });
+      if (!fullResponse.ok) return null;
+      
+      const fullSite = await fullResponse.json();
+      
+      // Normalización agresiva para el PageRenderer de la librería base
+      const normalizedPages = (fullSite.pages || []).map((p: any) => {
+        const sections = (p.sections || p.template?.sections || []).map(normalizeNodeTypes);
+        const template = p.template || {};
+        
+        return {
+          ...p,
+          tokens: p.tokens || fullSite.brand_tokens,
+          template: {
+            ...template,
+            sections: sections,
+            navbar: template.navbar || p.navbar,
+            footer: template.footer || p.footer
+          }
+        };
+      });
 
-      const data: any = document;
-
-      // Forzamos que sea el primer website encontrado sin importar el dominio
-      const website = data.websites?.[0];
-
-      if (!website) {
-        console.warn(`Website not found for domain: ${domain}`);
-        return null;
-      }
-
-      return website;
+      return {
+        ...fullSite,
+        pages: normalizedPages,
+        tokens: fullSite.brand_tokens,
+      };
     } else {
       // En producción: obtener de la API backend
       const response = await fetch(
@@ -74,39 +142,43 @@ async function getPageData(
 ) {
   try {
     if (isDevelopment) {
-      // En desarrollo: obtener de la db
-      await connectToDatabase();
-      // Force fetching whatever document is in DB
-      const data: any = await PageModel.findOne({}).lean();
+      // Usamos el site_id cacheado o listamos de nuevo
+      const siteId = lastFoundSiteId || (await (async () => {
+        const list = await fetch(`${MICROSERVICE_URL}/sites?limit=1`, { cache: 'no-store' }).then(r => r.json());
+        return list?.[0]?.site_id;
+      })());
 
-      if (!data) return null;
+      if (!siteId) return null;
 
-      // Forzamos el primer website de la lista
-      const website = data.websites?.[0];
+      const response = await fetch(`${MICROSERVICE_URL}/sites/${siteId}`, { cache: 'no-store' });
+      if (!response.ok) return null;
+      
+      const siteData = await response.json();
+      const pages = siteData.pages || [];
 
-      if (!website) return null;
-
-      // Usar raw_state directament para evitar errores si la data no esta mapeada correctamente
-      const rawWebsites = data.raw_state;
-      if (rawWebsites && Array.isArray(rawWebsites.pages)) {
-        return rawWebsites.pages.find((p: any) => {
-          // Normalizar slugs para comparación
-          const normalizedPageSlug = p.slug?.startsWith('/') ? p.slug.slice(1) : p.slug;
-          const normalizedSearchSlug = pageSlug === 'home' ? '' : pageSlug;
-
-          return normalizedPageSlug === normalizedSearchSlug ||
-                 p.slug === `/${pageSlug}` ||
-                 (p.slug === '/' && pageSlug === 'home') ||
-                 p.id === `page_${pageSlug}`;
-        });
-      }
-
-      // Fallback a mapped pages si por algun motivo raw no esta
-      const page = website.pages?.find((p: any) => p.slug === pageSlug);
+      // Buscamos la página por slug (normalizando el slug del microservicio)
+      const page = pages.find((p: any) => {
+        const normalizedPageSlug = p.slug?.startsWith('/') ? p.slug.slice(1) : (p.slug || '');
+        const normalizedSearchSlug = pageSlug === 'home' ? '' : pageSlug;
+        return normalizedPageSlug === normalizedSearchSlug || p.slug === pageSlug;
+      });
 
       if (!page) return null;
 
-      return page;
+      const sections = (page.sections || page.template?.sections || []).map(normalizeNodeTypes);
+      const template = page.template || {};
+
+      // NORMALIZACIÓN CRÍTICA: Re-construir el objeto template para el PageRenderer
+      return {
+        ...page,
+        tokens: page.tokens || siteData.brand_tokens,
+        template: {
+          ...template,
+          sections: sections,
+          navbar: template.navbar || page.navbar,
+          footer: template.footer || page.footer
+        }
+      };
     } else {
       // En producción: obtener de la API backend
       const response = await fetch(
@@ -180,10 +252,20 @@ export default async function Page({ params }: PageProps) {
   // 5. Cargar template si es necesario
   const fullPageData = loadTemplate(pageData);
 
-  // 6. Renderizar página
+  // 6. Extract design system data for Material Design 3
+  const designTokens = websiteConfig.design_tokens;
+  const cssVariables = websiteConfig.css_variables;
+  const tailwindConfig = websiteConfig.tailwind_config;
+
+  // 7. Renderizar página
   return (
     <>
       <link href={googleFontsUrl} rel="stylesheet" />
+      <DesignSystemInjector
+        cssVariables={cssVariables}
+        designTokens={designTokens}
+        tailwindConfig={tailwindConfig}
+      />
       <div className="bg-[var(--background)] min-h-screen antialiased" style={{ fontFamily }}>
         <PageRenderer page={fullPageData} />
       </div>
