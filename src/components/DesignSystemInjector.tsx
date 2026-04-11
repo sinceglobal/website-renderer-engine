@@ -20,9 +20,9 @@ export function DesignSystemInjector({
   useEffect(() => {
     if (!designTokens) return;
 
-    // Extract colors from Material Design 3 design_tokens
+    // Extract colors - handle both formats
     const colors = designTokens.colors || {};
-    const palette = colors.palette || {};
+    const palette = colors.palette || colors;  // Fallback to colors if no palette
     const semanticColors = colors.semantic || {};
 
     // Map Material Design 3 semantic colors to shadcn/ui color names
@@ -51,12 +51,17 @@ export function DesignSystemInjector({
 
     // Set Material Design 3 colors
     for (const [mdName, oklchValue] of Object.entries(palette)) {
+      // Skip non-color entries like 'mode'
+      if (typeof oklchValue !== 'string' || !oklchValue.includes('oklch')) {
+        continue;
+      }
+
       const shadcnName = colorMapping[mdName];
       if (shadcnName) {
-        root.style.setProperty(`--${shadcnName}`, oklchValue as string);
+        root.style.setProperty(`--${shadcnName}`, oklchValue);
       }
       // Also set the MD3 name directly for reference
-      root.style.setProperty(`--md3-${mdName}`, oklchValue as string);
+      root.style.setProperty(`--md3-${mdName}`, oklchValue);
     }
 
     // Set semantic colors
@@ -64,32 +69,32 @@ export function DesignSystemInjector({
       root.style.setProperty(`--${name}`, value as string);
     }
 
-    // Apply typography from design tokens
+    // Apply typography from design tokens - handle both formats
     const typography = designTokens.typography || {};
 
-    if (typography.display?.font_family) {
-      root.style.setProperty('--font-display', typography.display.font_family);
+    // Extract font families (handle nested objects)
+    const displayFont = typography.display?.font_family || typography.display || 'system-ui';
+    const bodyFont = typography.body?.font_family || typography.body || 'system-ui';
+    const monoFont = typography.mono?.font_family || typography.mono || 'monospace';
+
+    if (displayFont && typeof displayFont === 'string') {
+      root.style.setProperty('--font-display', displayFont);
     }
-    if (typography.body?.font_family) {
-      root.style.setProperty('--font-body', typography.body.font_family);
+    if (bodyFont && typeof bodyFont === 'string') {
+      root.style.setProperty('--font-body', bodyFont);
     }
-    if (typography.mono?.font_family) {
-      root.style.setProperty('--font-mono', typography.mono.font_family);
+    if (monoFont && typeof monoFont === 'string') {
+      root.style.setProperty('--font-mono', monoFont);
     }
 
     // Apply spacing scales if provided
     const spacing = designTokens.spacing || {};
-    if (spacing.scale) {
-      for (const [name, value] of Object.entries(spacing.scale)) {
-        root.style.setProperty(`--spacing-${name}`, value as string);
-      }
-    } else if (spacing.base) {
-      // If spacing has base and scale separately
-      if (typeof spacing === 'object') {
-        for (const [key, val] of Object.entries(spacing)) {
-          if (key !== 'base') {
-            root.style.setProperty(`--spacing-${key}`, val as string);
-          }
+    const spacingScale = spacing.scale || spacing;
+
+    if (spacingScale && typeof spacingScale === 'object') {
+      for (const [name, value] of Object.entries(spacingScale)) {
+        if (typeof value === 'string' && name !== 'base') {
+          root.style.setProperty(`--spacing-${name}`, value);
         }
       }
     }
@@ -97,7 +102,9 @@ export function DesignSystemInjector({
     // Apply border radius
     const borderRadius = designTokens.border_radius || {};
     for (const [name, value] of Object.entries(borderRadius)) {
-      root.style.setProperty(`--radius-${name}`, value as string);
+      if (typeof value === 'string') {
+        root.style.setProperty(`--radius-${name}`, value);
+      }
     }
 
     // Also apply standard Tailwind spacing aliases for compatibility

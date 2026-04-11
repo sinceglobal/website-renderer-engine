@@ -61,6 +61,10 @@
     from { height: var(--radix-accordion-content-height); }
     to { height: 0; }
   }
+
+  /* Chat Colors */
+  --color-chat-border: rgba(255, 255, 255, 0.05) !important;
+  --color-chat-border-hover: rgba(255, 255, 255, 0.1) !important;
 }
 
 /* ─── Default tokens (fallback antes de que TokenInjector cargue) ────────────

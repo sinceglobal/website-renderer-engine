@@ -1,5 +1,6 @@
 {
   "lockfileVersion": 1,
+  "configVersion": 0,
   "workspaces": {
     "": {
       "name": "website-renderer-engine",
@@ -11,6 +12,7 @@
         "react": "19.2.3",
         "react-dom": "19.2.3",
         "tailwind-merge": "^3.5.0",
+        "tailwindcss-animate": "^1.0.7",
       },
       "devDependencies": {
         "@tailwindcss/postcss": "^4",
