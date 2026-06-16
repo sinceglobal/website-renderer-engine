@@ -6,10 +6,17 @@
     "dev": "next dev --webpack --port 3005",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "update": "bun run scripts/update-local-website.ts",
+    "update:elearning": "bun run scripts/update-local-website.ts elearning",
+    "update:ecommerce": "bun run scripts/update-local-website.ts ecommerce",
+    "update:landing": "bun run scripts/update-local-website.ts landing",
+    "update:renderer": "bun run scripts/update-local-website.ts elearning --only-mongo",
+    "update:builder": "bun run scripts/update-local-website.ts elearning --only-pg",
+    "seed": "bun run scripts/seed-ecommerce.ts"
   },
   "dependencies": {
-    "@sinceglobal/website-builder-base": "file:../website-builder-base",
+    "@sinceglobal/website-builder-base": "^1.1.0",
     "clsx": "^2.1.1",
     "mongoose": "^9.3.0",
     "next": "16.1.6",
