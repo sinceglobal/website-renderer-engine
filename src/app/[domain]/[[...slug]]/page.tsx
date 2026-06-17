@@ -21,11 +21,12 @@ function rendererApiRoot(): string {
   return base.endsWith('/api') ? base : `${base}/api`;
 }
 
-function rendererFetchInit(): RequestInit {
+function rendererFetchInit(domain?: string): RequestInit {
   if (isDevelopment) return { cache: 'no-store' };
+  const tags = domain ? [`site-${domain}`] : [];
   return {
     headers: { Authorization: `Bearer ${process.env.BACKEND_API_KEY}` },
-    next: { revalidate: 3600 },
+    next: { revalidate: 3600, tags },
   } as RequestInit;
 }
 
@@ -86,7 +87,7 @@ function normalizeNodeTypes(node: any): any {
 async function getWebsiteConfig(domain: string) {
   const url = `${rendererApiRoot()}/websites/${domain}/config${PREVIEW ? '?preview=true' : ''}`;
   try {
-    const response = await fetch(url, rendererFetchInit());
+    const response = await fetch(url, rendererFetchInit(domain));
     if (!response.ok) {
       console.error(`Error fetching website config (${response.status}): ${url}`);
       return null;
@@ -105,7 +106,7 @@ async function getWebsiteConfig(domain: string) {
 async function getPageData(domain: string, pageSlug: string) {
   const url = `${rendererApiRoot()}/websites/${domain}/pages/${pageSlug}${PREVIEW ? '?preview=true' : ''}`;
   try {
-    const response = await fetch(url, rendererFetchInit());
+    const response = await fetch(url, rendererFetchInit(domain));
     if (!response.ok) {
       console.error(`Error fetching page (${response.status}): ${url}`);
       return null;
