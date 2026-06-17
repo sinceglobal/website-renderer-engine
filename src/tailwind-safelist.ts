@@ -4,7 +4,7 @@
  * Las clases usadas dentro de los componentes shadcn de la librería y en los
  * `style.className` de los page_json viven en datos en runtime, no en archivos
  * que Tailwind escanee. Este string fuerza su generación: el renderer escanea
- * su propio src (@source "../**/*.{ts,tsx}"), así que Tailwind ve estos tokens.
+ * su propio src (ts/tsx), así que Tailwind ve estos tokens y los emite.
  *
  * No se importa en ningún lado a propósito — solo existe para el escaneo.
  */
