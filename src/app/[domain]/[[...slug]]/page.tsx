@@ -8,6 +8,10 @@ const MICROSERVICE_URL = process.env.NEXT_PUBLIC_MICROSERVICE_URL || 'http://loc
 // In development we render drafts (preview); in production only published.
 const PREVIEW = isDevelopment;
 
+// No caching anywhere: render on every request so content edits are immediate.
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+
 /**
  * Base URL of the microservice renderer router (mounted at /api).
  * BACKEND_URL wins whenever it is set, so resolution never silently falls back
@@ -21,12 +25,13 @@ function rendererApiRoot(): string {
   return base.endsWith('/api') ? base : `${base}/api`;
 }
 
-function rendererFetchInit(domain?: string): RequestInit {
+// Always fetch fresh: this is a content-editing platform — edits must show up
+// immediately, with no ISR/data-cache delay. (Route is force-dynamic below.)
+function rendererFetchInit(): RequestInit {
   if (isDevelopment) return { cache: 'no-store' };
-  const tags = domain ? [`site-${domain}`] : [];
   return {
     headers: { Authorization: `Bearer ${process.env.BACKEND_API_KEY}` },
-    next: { revalidate: 3600, tags },
+    cache: 'no-store',
   } as RequestInit;
 }
 
@@ -87,7 +92,7 @@ function normalizeNodeTypes(node: any): any {
 async function getWebsiteConfig(domain: string) {
   const url = `${rendererApiRoot()}/websites/${domain}/config${PREVIEW ? '?preview=true' : ''}`;
   try {
-    const response = await fetch(url, rendererFetchInit(domain));
+    const response = await fetch(url, rendererFetchInit());
     if (!response.ok) {
       console.error(`Error fetching website config (${response.status}): ${url}`);
       return null;
@@ -106,7 +111,7 @@ async function getWebsiteConfig(domain: string) {
 async function getPageData(domain: string, pageSlug: string) {
   const url = `${rendererApiRoot()}/websites/${domain}/pages/${pageSlug}${PREVIEW ? '?preview=true' : ''}`;
   try {
-    const response = await fetch(url, rendererFetchInit(domain));
+    const response = await fetch(url, rendererFetchInit());
     if (!response.ok) {
       console.error(`Error fetching page (${response.status}): ${url}`);
       return null;
