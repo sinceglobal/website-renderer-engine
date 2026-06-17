@@ -22,6 +22,12 @@ import {
   purchaseHistoryPage,
   certificatesPage,
   subscriptionManagementPage,
+  // Auth
+  loginPageTemplate,
+  signupPageTemplate,
+  forgotPasswordPageTemplate,
+  resetPasswordPageTemplate,
+  verifyTokenPageTemplate,
 } from '@sinceglobal/website-builder-base';
 
 const TEMPLATES: Record<string, any> = {
@@ -51,6 +57,13 @@ const TEMPLATES: Record<string, any> = {
   'elearning-purchase-history': purchaseHistoryPage,
   'elearning-certificates': certificatesPage,
   'elearning-subscription-management': subscriptionManagementPage,
+
+  // Auth
+  'auth-login': loginPageTemplate,
+  'auth-signup': signupPageTemplate,
+  'auth-forgot-password': forgotPasswordPageTemplate,
+  'auth-reset-password': resetPasswordPageTemplate,
+  'auth-verify-token': verifyTokenPageTemplate,
 };
 
 export function loadTemplate(pageData: any) {
