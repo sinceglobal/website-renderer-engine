@@ -9,16 +9,16 @@ const MICROSERVICE_URL = process.env.NEXT_PUBLIC_MICROSERVICE_URL || 'http://loc
 const PREVIEW = isDevelopment;
 
 /**
- * Both dev and prod resolve the site the SAME way now: through the domain
- * endpoints exposed by the microservice (renderer router, mounted at /api).
- * The only difference is the host root and the `preview` flag.
+ * Base URL of the microservice renderer router (mounted at /api).
+ * BACKEND_URL wins whenever it is set, so resolution never silently falls back
+ * to localhost just because NODE_ENV isn't exactly "development".
  */
 function rendererApiRoot(): string {
-  if (isDevelopment) {
-    const base = MICROSERVICE_URL.replace(/\/api\/v1\/?$/, '/api');
-    return base.endsWith('/api') ? base : `${base}/api`;
-  }
-  return `${process.env.BACKEND_URL}/api`;
+  const backend = process.env.BACKEND_URL?.replace(/\/$/, '');
+  if (backend) return `${backend}/api`;
+  // Dev fallback derived from the public microservice URL.
+  const base = MICROSERVICE_URL.replace(/\/api\/v1\/?$/, '/api');
+  return base.endsWith('/api') ? base : `${base}/api`;
 }
 
 function rendererFetchInit(): RequestInit {
@@ -84,16 +84,16 @@ function normalizeNodeTypes(node: any): any {
  * Mismo endpoint en dev y prod; sólo cambia el host y el flag preview.
  */
 async function getWebsiteConfig(domain: string) {
+  const url = `${rendererApiRoot()}/websites/${domain}/config${PREVIEW ? '?preview=true' : ''}`;
   try {
-    const url = `${rendererApiRoot()}/websites/${domain}/config${PREVIEW ? '?preview=true' : ''}`;
     const response = await fetch(url, rendererFetchInit());
     if (!response.ok) {
-      console.error(`Error fetching website config: ${response.status}`);
+      console.error(`Error fetching website config (${response.status}): ${url}`);
       return null;
     }
     return await response.json();
   } catch (error) {
-    console.error('Error fetching website config:', error);
+    console.error(`Error fetching website config from ${url}:`, error);
     return null;
   }
 }
@@ -103,11 +103,11 @@ async function getWebsiteConfig(domain: string) {
  * Mismo endpoint en dev y prod; sólo cambia el host y el flag preview.
  */
 async function getPageData(domain: string, pageSlug: string) {
+  const url = `${rendererApiRoot()}/websites/${domain}/pages/${pageSlug}${PREVIEW ? '?preview=true' : ''}`;
   try {
-    const url = `${rendererApiRoot()}/websites/${domain}/pages/${pageSlug}${PREVIEW ? '?preview=true' : ''}`;
     const response = await fetch(url, rendererFetchInit());
     if (!response.ok) {
-      if (response.status !== 404) console.error(`Error fetching page: ${response.status}`);
+      console.error(`Error fetching page (${response.status}): ${url}`);
       return null;
     }
     const pageJson = await response.json();
@@ -115,7 +115,7 @@ async function getPageData(domain: string, pageSlug: string) {
     // minúscula; normalizamos antes de pasarlo al PageRenderer de la librería.
     return normalizeNodeTypes(pageJson);
   } catch (error) {
-    console.error('Error fetching page data:', error);
+    console.error(`Error fetching page data from ${url}:`, error);
     return null;
   }
 }
