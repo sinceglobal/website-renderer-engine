@@ -85,16 +85,21 @@ export function loadTemplate(pageData: any) {
   const templateName = pageData.metadata?.useTemplate;
 
   if (templateName && TEMPLATES[templateName]) {
-    const template = TEMPLATES[templateName];
+    const templateData = TEMPLATES[templateName];
+    const isDirectTemplate = !!templateData.sections;
 
     // Merge template with page data
-    const materialized = {
-      ...template,
+    const materialized: any = {
+      ...templateData,
       id: pageData.id,
-      label: pageData.name || template.label,
-      slug: pageData.slug || template.slug,
-      seo: pageData.metadata?.seo || template.seo,
+      label: pageData.name || (isDirectTemplate ? templateData.label : templateData.template?.label),
+      slug: pageData.slug || (isDirectTemplate ? templateData.slug : templateData.template?.slug),
+      seo: pageData.metadata?.seo || (isDirectTemplate ? templateData.seo : templateData.template?.seo),
     };
+
+    if (isDirectTemplate) {
+      materialized.template = templateData;
+    }
 
     // Ensure navbar/footer from root level of template are moved into template object if necessary
     if (materialized.navbar && !materialized.template?.navbar) {
