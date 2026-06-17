@@ -13,9 +13,11 @@ RUN apk add --no-cache libc6-compat
 ARG NPM_TOKEN
 ENV NPM_TOKEN=${NPM_TOKEN}
 # .npmrc points @sinceglobal → GitHub Packages and reads ${NPM_TOKEN} from env.
-COPY package.json package-lock.json .npmrc ./
+# Using package-lock.json* so it doesn't fail if we delete it to avoid local symlinks
+COPY package.json package-lock.json* .npmrc ./
 # Dev uses bun (bun.lock), so package-lock.json lags — use install, not ci.
-RUN npm install --no-audit --no-fund
+# Ignore package-lock to avoid local 'link: true' issues breaking the Docker build
+RUN npm install --no-audit --no-fund --no-package-lock
 
 # ── 2) builder: compile the standalone server ────────────────────────────────
 FROM node:22-alpine AS builder
