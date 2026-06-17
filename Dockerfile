@@ -14,8 +14,8 @@ ARG NPM_TOKEN
 ENV NPM_TOKEN=${NPM_TOKEN}
 # .npmrc points @sinceglobal → GitHub Packages and reads ${NPM_TOKEN} from env.
 COPY package.json package-lock.json .npmrc ./
-# npm ci when the lockfile is in sync; fall back to install while it stabilizes.
-RUN npm ci || npm install
+# Dev uses bun (bun.lock), so package-lock.json lags — use install, not ci.
+RUN npm install --no-audit --no-fund
 
 # ── 2) builder: compile the standalone server ────────────────────────────────
 FROM node:22-alpine AS builder

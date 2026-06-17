@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * Domain-based routing.
+ * Domain-based routing (Next.js 16 "proxy" convention, formerly "middleware").
  *
  * The renderer serves many sites from a single deployment. Each incoming Host
  * (e.g. `demo.interactify.work`) is rewritten to the internal route
@@ -11,10 +11,10 @@ import type { NextRequest } from 'next/server';
  * its registered `domain` column — see website-builder-microservice
  * api/v1/renderer._find_site_by_domain.
  *
- * No DB/Mongo lookup happens here: the page itself returns notFound() when the
- * domain or slug doesn't resolve, so the middleware stays a pure URL rewrite.
+ * No DB lookup happens here: the page itself returns notFound() when the domain
+ * or slug doesn't resolve, so this stays a pure URL rewrite.
  */
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
     const { pathname, search } = request.nextUrl;
     const host = request.headers.get('host') || '';
 
