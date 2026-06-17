@@ -137,11 +137,13 @@ export async function generateMetadata({ params }: PageProps) {
  */
 export default async function Page({ params }: PageProps) {
   const { domain, slug } = await params;
+  console.log(`[render] domain="${domain}" slug=${JSON.stringify(slug ?? null)}`);
 
   // 1. Obtener configuración del website
   const websiteConfig = await getWebsiteConfig(domain);
 
   if (!websiteConfig) {
+    console.error(`[render] notFound: sin config para domain="${domain}"`);
     return notFound();
   }
 
@@ -153,6 +155,7 @@ export default async function Page({ params }: PageProps) {
   const pageData = await getPageData(domain, pageSlug);
 
   if (!pageData) {
+    console.error(`[render] notFound: sin página domain="${domain}" slug="${pageSlug}"`);
     return notFound();
   }
 
